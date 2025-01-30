@@ -6,4 +6,4 @@
 
 4.run migrations
 
-5.create superstaruser
+5.create superuser
