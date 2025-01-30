@@ -1,0 +1,129 @@
+{% extends 'orders/base.html' %}
+{% block title %} Restaurant Menu {% endblock %}
+{% block content %}
+    <h1>Our Menu</h1>
+    <div class="menu-grid" id="menuGrid"></div>
+    <div class="order-form" id="OrderForm">
+        <h2>Place your order</h2>
+        <form onsubmit="return submitOrder(event)"
+            <div class="form-group">
+                <label for="customerName">Your Name</label>
+                <input type="text" id="customerName" required>
+            </div>
+            <div class="form-group">
+                <label for="customerEmail">Email</label>
+                <input type="email" id="customerEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="pickupTime">Pickup Time</label>
+                <input type="datetime" id="pickupTime" required>
+            </div>
+            
+            <div class="cart-summary" id="cartSummary">
+                <h3>Your Order</h3>
+                <div id="orderItems"></div>
+                <p>Total: $<span id="totalAmount">0.00</span></p>
+            </div>
+
+            <button type="submit" class="btn">Place Order</button>
+        </form>
+    </div>
+
+    <script>
+        const csrfToken=document.querySelector('[name=csrfmiddlewaretoken]').value;
+        let menuItems=[];
+        let cart={};
+        function displayMenu() {
+            const menuGrid = document.getElementById('menuGrid');
+            menuGrid.innerHTML=menuItems.map(item =>
+                <div class="menu-item">
+                    <h3>${item.name}</h3>
+                    <p>${item.description}</p>
+                    <p><strong>$${item.price}</strong></p>
+                    <div class="form-group">
+                        <label>Quanity</label>
+                        <input type = "number"
+                            min="0"
+                            value="${cart{item.id}||0}"
+                            onchange="updateCart(${item.id}), this.value)"/>
+                    </div>
+                </div>
+            ).join('');
+        }
+
+        function updateCart(itemId, quantity){
+            quantity=parseInt(quantity);
+            if (quantity>0){
+                cart[itemId]=quantity;
+            }else{
+                delete cart[itemId];
+            }
+            updateOrderSummary();
+        }
+
+        function updateOrderSummary(){
+            const orderItems=document.getElementById('orderItems');
+            let total=0;
+            const itemsHtml = Object.entries(cart).map(([itemId, quantiy]) => {
+                const item=menuItems.find(m=>m.id===parseInt(itemId));
+                const itemTotal=item.price*quantity;
+                total+=itemTotal;
+                return `
+                <div>
+                    ${quantity}x ${item.name}-$${itemTotal.toFixed(2)}
+                </div>
+                `;
+            }).join('');
+
+            orderItems.innerHTML=itemsHtml;
+            document.getElementById('totalAmount').textContent=total.toFixed(2);
+        }
+
+        async function submitOrder(event){
+            event.preventDefault();
+            if(Object.keys(cart).length===0){
+                alert("please select at least one item");
+                return false;
+            }
+            const orderData={
+                customer_name:document.getElementById('customerName').value,
+                customer_email:document.getElementById('customerEmail').value,
+                pickup_time:document.getElementById('pickupTime').value,
+                total_amount:document.getElementById('totalAmount').value,
+                items: Object.entries(cart).map(([itemId, quantity]) =>({
+                    product: parseInt(itemId),
+                    quantity: quantiy,
+                    price: menuItems.find(m=> m.id===parseInt(itemId)).price
+                }))
+            }
+        }
+
+        try{
+            const response=await fetch('/api/orders/', {
+                method:'POST',
+                headers:{
+                    'Content-Type':'applications/json',
+                    'X-XSRFToken': csrfToken
+                },
+                body: JSON.stringify(orderData)
+            });
+            if(response.ok){
+                alert('order placed successfully')
+                cart={};
+                document.querySelector('form').reset();
+                updateOrderSummary();
+                displayMenu();
+            }else{
+                throw new Error("order submission failed")
+            }
+
+        }catch(error){
+            console.error('Error submitting order', error);
+            alert("please try again later");
+        }
+        return false;
+    
+    document.addEventListener('DOMContentLoaded', loadMenu);
+    </script>
+</body>
+</html>
